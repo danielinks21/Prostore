@@ -1,9 +1,11 @@
 'use server'
 
-import {signInFormSchema} from "@/lib/vaildators";
+import {signInFormSchema, signUpFormSchema} from "@/lib/vaildators";
 import {signIn, signOut} from '@/auth';
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-
+import { hashSync } from "bcrypt-ts-edge";
+import { prisma } from "@/lib/prisma";
+import { formatError} from  '../utils'
 //sign in the user with credentials
 export async function signInwithcredentails (prevState: unknown, formData: FormData) {
     try {const user = signInFormSchema.parse({
@@ -24,5 +26,41 @@ export async function signInwithcredentails (prevState: unknown, formData: FormD
 
 // sign out the user
 export async function signOutUser() {
-    await signOut();
+    await signOut({ redirectTo: "/" });
 }
+
+//sign up the user with credentials
+export async function signUpUser(prevState: unknown, formData: FormData) {
+    try {
+        const user = signUpFormSchema.parse({
+            name: formData.get('name'),
+            email: formData.get('email'),
+            password: formData.get('password'),
+            confirmPassword: formData.get('confirmPassword'),
+
+        })
+const plainPassword = user.password;
+        user.password = hashSync(user.password, 10);
+        await prisma.user.create({
+            data: {
+                name: user.name,
+                email: user.email,
+                password: user.password
+            }
+        })
+        await signIn('credentials',{
+            email: user.email,
+            password: plainPassword,
+        });
+
+        return {success: true, message: 'User created successfully'};
+    } catch (error) {
+        
+if(isRedirectError(error)) {
+        throw error;
+    }
+    return {success: false, message: formatError(error) };
+    }
+}
+
+//message: 'Invalid email or password'

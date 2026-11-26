@@ -7,3 +7,11 @@ export const signInDefaultValves = {
   email: '',
   password: '',
 }
+
+
+export const signUpDefaultValves = {
+  email: '',
+  password: '',
+  confirmPassword: '',
+  
+}
